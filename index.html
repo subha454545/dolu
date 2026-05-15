@@ -1,0 +1,113 @@
+<script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
+<script>
+    const socket = io('https://dolu.onrender.com', {
+        transports: ['websocket', 'polling']
+    });
+    
+    let roomId = null;
+    let playerNum = null;
+    let moveMade = false;
+    
+    const statusDiv = document.getElementById('status');
+    const choicesDiv = document.getElementById('choices');
+    const findBtn = document.getElementById('findMatch');
+    const resultDiv = document.getElementById('result');
+    const playerInfoDiv = document.getElementById('playerInfo');
+
+    socket.on('connect', () => {
+        console.log('Connected to server');
+        statusDiv.textContent = 'Click "Find Match" to start';
+    });
+
+    socket.on('disconnect', () => {
+        console.log('Disconnected from server');
+        statusDiv.textContent = 'Disconnected. Refresh page.';
+    });
+
+    socket.on('waiting', () => {
+        console.log('Waiting for opponent...');
+        statusDiv.textContent = '⏳ Waiting for opponent...';
+    });
+
+    socket.on('match_found', (data) => {
+        console.log('Match found!', data);
+        roomId = data.room_id;
+        playerNum = data.player;
+        statusDiv.textContent = `🎮 Match found! You are Player ${playerNum}`;
+        playerInfoDiv.textContent = `You are Player ${playerNum}`;
+        playerInfoDiv.style.display = 'block';
+        choicesDiv.style.display = 'flex';
+        findBtn.style.display = 'none';
+        moveMade = false;
+        document.querySelectorAll('.choice-btn').forEach(b => b.disabled = false);
+    });
+
+    socket.on('game_result', (data) => {
+        console.log('Game result:', data);
+        choicesDiv.style.display = 'none';
+        resultDiv.style.display = 'block';
+        
+        const yourChoice = playerNum === 1 ? data.player1_choice : data.player2_choice;
+        const opponentChoice = playerNum === 1 ? data.player2_choice : data.player1_choice;
+        
+        let text = `You chose ${yourChoice}, opponent chose ${opponentChoice}. `;
+        let cls = '';
+        
+        if (data.winner === 'tie') {
+            text += "It's a tie! 🤝";
+            cls = 'tie';
+        } else if ((data.winner === 'player1' && playerNum === 1) || (data.winner === 'player2' && playerNum === 2)) {
+            text += "🎉 YOU WIN! 🎉";
+            cls = 'win';
+        } else {
+            text += "😢 You lose!";
+            cls = 'lose';
+        }
+        
+        resultDiv.textContent = text;
+        resultDiv.className = `result ${cls}`;
+        statusDiv.textContent = 'Game over! Click "Find Match" to play again.';
+        findBtn.style.display = 'block';
+        playerInfoDiv.style.display = 'none';
+        roomId = null;
+    });
+
+    socket.on('opponent_disconnected', () => {
+        statusDiv.textContent = 'Opponent disconnected. Click "Find Match" to play again.';
+        findBtn.style.display = 'block';
+        choicesDiv.style.display = 'none';
+        playerInfoDiv.style.display = 'none';
+        roomId = null;
+    });
+
+    socket.on('error', (data) => {
+        console.error('Server error:', data);
+        statusDiv.textContent = 'Error: ' + data.message;
+    });
+
+    findBtn.onclick = () => {
+        console.log('Finding match...');
+        resultDiv.style.display = 'none';
+        moveMade = false;
+        statusDiv.textContent = '🔍 Finding opponent...';
+        socket.emit('find_match');
+    };
+
+    document.querySelectorAll('.choice-btn').forEach(btn => {
+        btn.onclick = () => {
+            if (moveMade || !roomId) {
+                console.log('Cannot move:', moveMade, roomId);
+                return;
+            }
+            moveMade = true;
+            const choice = btn.dataset.choice;
+            console.log('Making move:', choice);
+            socket.emit('make_move', {
+                room_id: roomId,
+                choice: choice,
+                player: playerNum
+            });
+            statusDiv.textContent = 'Waiting for opponent...';
+        };
+    });
+</script>
