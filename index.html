@@ -1,0 +1,528 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Stone Paper Scissors - Heart System</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            text-align: center;
+            background: linear-gradient(135deg, #1a1a2e, #16213e);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            margin: 0;
+            padding: 20px;
+        }
+        .container {
+            background: white;
+            border-radius: 20px;
+            padding: 30px;
+            max-width: 550px;
+            width: 100%;
+            text-align: center;
+        }
+        h1 { margin: 0 0 20px 0; font-size: 24px; }
+        
+        .vs-area {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            gap: 15px;
+        }
+        .fighter {
+            flex: 1;
+            text-align: center;
+            background: #f8f9fa;
+            border-radius: 20px;
+            padding: 15px;
+        }
+        .fighter-hand {
+            font-size: 60px;
+            transition: transform 0.2s ease;
+        }
+        .fighter.shake {
+            animation: fighterShake 0.3s ease-in-out;
+        }
+        @keyframes fighterShake {
+            0% { transform: translateX(0); }
+            25% { transform: translateX(-5px); }
+            75% { transform: translateX(5px); }
+            100% { transform: translateX(0); }
+        }
+        .hearts {
+            font-size: 20px;
+            margin-top: 10px;
+            letter-spacing: 2px;
+        }
+        .vs-text {
+            font-size: 24px;
+            font-weight: bold;
+            color: #764ba2;
+        }
+        
+        .choices {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            margin: 20px 0;
+        }
+        .choice {
+            font-size: 20px;
+            padding: 5px 10px;
+            border: none;
+            background: #667eea;
+            color: white;
+            border-radius: 15px;
+            cursor: pointer;
+            transition: transform 0.2s;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 5px;
+        }
+        .choice:hover { transform: scale(1.1); }
+        .choice:disabled { opacity: 0.5; cursor: not-allowed; }
+        .choice-hand {
+            font-size: 40px;
+            display: inline-block;
+            transition: transform 0.2s ease;
+        }
+        .choice:hover .choice-hand {
+            animation: handShake 0.5s ease-in-out infinite;
+        }
+        @keyframes handShake {
+            0% { transform: rotate(0deg); }
+            25% { transform: rotate(-15deg); }
+            75% { transform: rotate(15deg); }
+            100% { transform: rotate(0deg); }
+        }
+        
+        button {
+            background: #764ba2;
+            color: white;
+            border: none;
+            padding: 12px 30px;
+            font-size: 16px;
+            border-radius: 25px;
+            cursor: pointer;
+            margin: 10px;
+        }
+        #findBtn {
+            display: block;
+            margin: 10px auto;
+        }
+        .status {
+            background: #f0f0f0;
+            padding: 15px;
+            border-radius: 10px;
+            margin: 20px 0;
+        }
+        .round-result {
+            font-size: 18px;
+            font-weight: bold;
+            padding: 10px;
+            border-radius: 10px;
+            margin: 10px 0;
+        }
+        .win { background: #d4edda; color: #155724; }
+        .lose { background: #f8d7da; color: #721c24; }
+        .tie { background: #fff3cd; color: #856404; }
+        .game-over {
+            font-size: 24px;
+            font-weight: bold;
+            padding: 15px;
+            border-radius: 10px;
+            margin: 15px 0;
+        }
+        .player-info {
+            background: #e0e0e0;
+            padding: 10px;
+            border-radius: 10px;
+            margin: 10px 0;
+            font-weight: bold;
+        }
+        .reset-btn {
+            background: #ff5722;
+            margin-top: 10px;
+        }
+        .next-round-info {
+            font-size: 14px;
+            color: #666;
+            margin-top: 10px;
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <h1>🪨 Stone | 📄 Paper | ✂️ Scissors</h1>
+    
+    <div class="vs-area">
+        <div class="fighter" id="fighter1">
+            <div class="fighter-hand" id="fighterHand1">🤜</div>
+            <div class="hearts" id="hearts1">❤️ ❤️ ❤️</div>
+            <div>YOU</div>
+        </div>
+        <div class="vs-text">VS</div>
+        <div class="fighter" id="fighter2">
+            <div class="fighter-hand" id="fighterHand2">🤛</div>
+            <div class="hearts" id="hearts2">❤️ ❤️ ❤️</div>
+            <div>OPPONENT</div>
+        </div>
+    </div>
+    
+    <button id="findBtn">🔍 Find Match</button>
+    <button id="resetBtn" class="reset-btn" style="display:none">🔄 Play Again</button>
+    
+    <div class="status" id="status">Click "Find Match" to start</div>
+    <div class="player-info" id="playerInfo" style="display:none"></div>
+    
+    <div class="choices" id="choices" style="display:none">
+        <button class="choice" data-choice="rock">
+            <span class="choice-hand">✊</span>
+            <span>Rock</span>
+        </button>
+        <button class="choice" data-choice="paper">
+            <span class="choice-hand">✋</span>
+            <span>Paper</span>
+        </button>
+        <button class="choice" data-choice="scissors">
+            <span class="choice-hand">✌️</span>
+            <span>Scissors</span>
+        </button>
+    </div>
+    
+    <div id="roundResult" style="display:none" class="round-result"></div>
+    <div id="gameOverResult" style="display:none" class="game-over"></div>
+    <div class="next-round-info" id="nextRoundInfo" style="display:none">Next round starting automatically...</div>
+</div>
+
+<script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
+<script>
+    let socket = null;
+    let room = null;
+    let playerNum = null;
+    let moveMade = false;
+    let reconnectAttempts = 0;
+    
+    let player1Hearts = 3;
+    let player2Hearts = 3;
+    let gameActive = true;
+    let waitingForNextRound = false;
+    let roundInProgress = false;
+    
+    const findBtn = document.getElementById('findBtn');
+    const resetBtn = document.getElementById('resetBtn');
+    const statusDiv = document.getElementById('status');
+    const playerInfo = document.getElementById('playerInfo');
+    const choicesDiv = document.getElementById('choices');
+    const roundResultDiv = document.getElementById('roundResult');
+    const gameOverDiv = document.getElementById('gameOverResult');
+    const nextRoundInfo = document.getElementById('nextRoundInfo');
+    const fighterHand1 = document.getElementById('fighterHand1');
+    const fighterHand2 = document.getElementById('fighterHand2');
+    const fighter1 = document.getElementById('fighter1');
+    const fighter2 = document.getElementById('fighter2');
+    const hearts1 = document.getElementById('hearts1');
+    const hearts2 = document.getElementById('hearts2');
+
+    function updateHeartsDisplay() {
+        let hearts1Html = '';
+        for (let i = 0; i < player1Hearts; i++) hearts1Html += '❤️ ';
+        for (let i = player1Hearts; i < 3; i++) hearts1Html += '🖤 ';
+        hearts1.innerHTML = hearts1Html.trim();
+        
+        let hearts2Html = '';
+        for (let i = 0; i < player2Hearts; i++) hearts2Html += '❤️ ';
+        for (let i = player2Hearts; i < 3; i++) hearts2Html += '🖤 ';
+        hearts2.innerHTML = hearts2Html.trim();
+    }
+
+    function resetGame() {
+        player1Hearts = 3;
+        player2Hearts = 3;
+        gameActive = true;
+        waitingForNextRound = false;
+        roundInProgress = false;
+        updateHeartsDisplay();
+        resetHands();
+        roundResultDiv.style.display = 'none';
+        gameOverDiv.style.display = 'none';
+        nextRoundInfo.style.display = 'none';
+        statusDiv.innerHTML = 'Game reset! Click "Find Match" to play again.';
+        findBtn.style.display = 'block';
+        resetBtn.style.display = 'none';
+        choicesDiv.style.display = 'none';
+        playerInfo.style.display = 'none';
+        room = null;
+        playerNum = null;
+        moveMade = false;
+    }
+
+    function startNextRound() {
+        waitingForNextRound = false;
+        roundInProgress = true;
+        moveMade = false;
+        resetHands();
+        roundResultDiv.style.display = 'none';
+        nextRoundInfo.style.display = 'none';
+        const roundNumber = 4 - Math.max(player1Hearts, player2Hearts);
+        statusDiv.innerHTML = `Round ${roundNumber} - Make your move!`;
+        document.querySelectorAll('.choice').forEach(b => {
+            b.disabled = false;
+            b.style.opacity = '1';
+            b.style.pointerEvents = 'auto';
+        });
+    }
+
+    function endGame(actualWinner) {
+        gameActive = false;
+        roundInProgress = false;
+        const isPlayer1Winner = (actualWinner === 'player1' && playerNum === 1) || (actualWinner === 'player2' && playerNum === 2);
+        
+        gameOverDiv.style.display = 'block';
+        if (actualWinner === 'tie') {
+            gameOverDiv.innerHTML = '🤝 GAME ENDS IN A DRAW! 🤝';
+            gameOverDiv.className = 'game-over tie';
+        } else if (isPlayer1Winner) {
+            gameOverDiv.innerHTML = '🏆🎉 YOU WIN THE GAME! 🎉🏆';
+            gameOverDiv.className = 'game-over win';
+        } else {
+            gameOverDiv.innerHTML = '💀 GAME OVER! YOU LOST! 💀';
+            gameOverDiv.className = 'game-over lose';
+        }
+        statusDiv.innerHTML = 'Game over! Click "Play Again" to start a new match.';
+        findBtn.style.display = 'none';
+        resetBtn.style.display = 'block';
+        choicesDiv.style.display = 'none';
+        nextRoundInfo.style.display = 'none';
+    }
+
+    function processRoundResult(winner, p1Choice, p2Choice) {
+        console.log('Processing round result - Actual winner:', winner);
+        console.log('My player number:', playerNum);
+        
+        if (!gameActive) return;
+        
+        updateHand(fighterHand1, p1Choice);
+        updateHand(fighterHand2, p2Choice);
+        
+        let roundResultText = '';
+        let isWinner = false;
+        
+        if (winner === 'tie') {
+            roundResultText = "🤝 DRAW! No hearts lost! 🤝";
+            roundResultDiv.className = 'round-result tie';
+            shakeFighter(fighter1);
+            shakeFighter(fighter2);
+        } else {
+            // Determine if current player won or lost
+            const didWin = (winner === 'player1' && playerNum === 1) || (winner === 'player2' && playerNum === 2);
+            
+            if (didWin) {
+                isWinner = true;
+                if (playerNum === 1) {
+                    player2Hearts--;
+                    roundResultText = `🎉 YOU WIN! Opponent loses a heart! 💔 (${player2Hearts}/3 hearts left)`;
+                } else {
+                    player1Hearts--;
+                    roundResultText = `🎉 YOU WIN! Opponent loses a heart! 💔 (${player1Hearts}/3 hearts left)`;
+                }
+                roundResultDiv.className = 'round-result win';
+                shakeFighter(fighter2);
+            } else {
+                if (playerNum === 1) {
+                    player1Hearts--;
+                    roundResultText = `💔 YOU LOSE! You lose a heart! 💔 (${player1Hearts}/3 hearts left)`;
+                } else {
+                    player2Hearts--;
+                    roundResultText = `💔 YOU LOSE! You lose a heart! 💔 (${player2Hearts}/3 hearts left)`;
+                }
+                roundResultDiv.className = 'round-result lose';
+                shakeFighter(fighter1);
+            }
+            updateHeartsDisplay();
+            
+            // Check game over condition
+            if (player1Hearts <= 0 || player2Hearts <= 0) {
+                endGame(winner);
+                return;
+            }
+        }
+        
+        roundResultDiv.innerHTML = roundResultText;
+        roundResultDiv.style.display = 'block';
+        
+        if (gameActive) {
+            statusDiv.innerHTML = 'Round complete! Next round starting...';
+            nextRoundInfo.style.display = 'block';
+            setTimeout(() => {
+                if (gameActive && !waitingForNextRound) {
+                    waitingForNextRound = true;
+                    startNextRound();
+                }
+            }, 2000);
+        }
+    }
+
+    function updateHand(handElement, choice) {
+        if (choice === 'rock') handElement.innerHTML = '✊';
+        else if (choice === 'paper') handElement.innerHTML = '✋';
+        else if (choice === 'scissors') handElement.innerHTML = '✌️';
+    }
+
+    function resetHands() {
+        fighterHand1.innerHTML = '🤜';
+        fighterHand2.innerHTML = '🤛';
+    }
+
+    function shakeFighter(fighterElement) {
+        fighterElement.classList.add('shake');
+        setTimeout(() => fighterElement.classList.remove('shake'), 300);
+    }
+
+    function connectSocket() {
+        if (socket && socket.connected) return;
+        
+        socket = io({
+            transports: ['websocket', 'polling'],
+            reconnection: true,
+            reconnectionAttempts: Infinity,
+            reconnectionDelay: 1000,
+            reconnectionDelayMax: 5000,
+            timeout: 60000
+        });
+        
+        socket.on('connect', () => {
+            console.log('✅ Connected to server');
+            reconnectAttempts = 0;
+            statusDiv.innerHTML = '✅ Connected! Click "Find Match"';
+            resetHands();
+        });
+        
+        socket.on('disconnect', () => {
+            console.log('❌ Disconnected from server');
+            statusDiv.innerHTML = '⚠️ Connection lost. Reconnecting...';
+        });
+        
+        socket.on('connect_error', (error) => {
+            console.log('Connection error:', error);
+            reconnectAttempts++;
+            statusDiv.innerHTML = `🔄 Reconnecting... (Attempt ${reconnectAttempts})`;
+        });
+        
+        socket.on('waiting', () => {
+            console.log('⏳ Waiting for opponent...');
+            statusDiv.innerHTML = '⏳ Waiting for opponent...';
+        });
+        
+        socket.on('match_found', (data) => {
+            console.log('🎮 Match found!', data);
+            room = data.room;
+            playerNum = data.player;
+            gameActive = true;
+            roundInProgress = true;
+            player1Hearts = 3;
+            player2Hearts = 3;
+            updateHeartsDisplay();
+            statusDiv.innerHTML = `🎮 Match found! You are Player ${playerNum} - Round 1! Make your move!`;
+            playerInfo.innerHTML = `You are Player ${playerNum} - Best of 3 hearts!`;
+            playerInfo.style.display = 'block';
+            choicesDiv.style.display = 'flex';
+            findBtn.style.display = 'none';
+            resetBtn.style.display = 'none';
+            moveMade = false;
+            resetHands();
+            roundResultDiv.style.display = 'none';
+            gameOverDiv.style.display = 'none';
+            nextRoundInfo.style.display = 'none';
+            document.querySelectorAll('.choice').forEach(b => {
+                b.disabled = false;
+                b.style.opacity = '1';
+                b.style.pointerEvents = 'auto';
+            });
+        });
+        
+        socket.on('game_result', (data) => {
+            console.log('🏆 Round result received:', data);
+            console.log('Winner from server:', data.winner);
+            processRoundResult(data.winner, data.p1_choice, data.p2_choice);
+        });
+    }
+
+    findBtn.onclick = () => {
+        console.log('🔍 Finding match...');
+        roundResultDiv.style.display = 'none';
+        gameOverDiv.style.display = 'none';
+        statusDiv.innerHTML = '🔍 Finding opponent...';
+        
+        if (!socket || !socket.connected) {
+            statusDiv.innerHTML = '🔄 Connecting to server...';
+            connectSocket();
+            setTimeout(() => {
+                if (socket && socket.connected) {
+                    socket.emit('find_match');
+                } else {
+                    statusDiv.innerHTML = '⚠️ Connection failed. Please refresh the page.';
+                }
+            }, 1000);
+        } else {
+            socket.emit('find_match');
+        }
+        resetHands();
+    };
+
+    resetBtn.onclick = () => {
+        resetGame();
+        if (socket && socket.connected) {
+            socket.emit('find_match');
+        } else {
+            connectSocket();
+            setTimeout(() => {
+                if (socket && socket.connected) {
+                    socket.emit('find_match');
+                }
+            }, 1000);
+        }
+    };
+
+    document.querySelectorAll('.choice').forEach(btn => {
+        btn.onclick = () => {
+            if (moveMade || !room || !gameActive || !roundInProgress) {
+                console.log('Cannot move:', {moveMade, room, gameActive, roundInProgress});
+                return;
+            }
+            moveMade = true;
+            const choice = btn.dataset.choice;
+            console.log(`📤 Making move: ${choice} as player ${playerNum}`);
+            
+            if (playerNum === 1) {
+                updateHand(fighterHand1, choice);
+            } else {
+                updateHand(fighterHand2, choice);
+            }
+            
+            if (socket && socket.connected) {
+                socket.emit('make_move', {
+                    room: room,
+                    player: playerNum,
+                    choice: choice
+                });
+            } else {
+                statusDiv.innerHTML = '⚠️ Connection lost. Please find a new match.';
+                moveMade = false;
+                return;
+            }
+            statusDiv.innerHTML = '⏳ Waiting for opponent...';
+            document.querySelectorAll('.choice').forEach(b => b.disabled = true);
+        };
+    });
+
+    connectSocket();
+    updateHeartsDisplay();
+</script>
+</body>
+</html>
