@@ -1,0 +1,279 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Rock Paper Scissors - FIGHT!</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            background: linear-gradient(135deg, #0a0f1e, #1e1b4b);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-family: Arial, sans-serif;
+            padding: 20px;
+        }
+        .game {
+            background: rgba(0,0,0,0.5);
+            border-radius: 40px;
+            padding: 30px;
+            max-width: 600px;
+            width: 100%;
+            text-align: center;
+        }
+        .vs-area {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 30px;
+        }
+        .fighter {
+            background: rgba(0,0,0,0.5);
+            border-radius: 30px;
+            padding: 20px;
+            width: 40%;
+            transition: 0.1s;
+        }
+        .fighter.shake {
+            animation: shake 0.3s ease;
+        }
+        @keyframes shake {
+            0%,100%{transform:translate(0,0)}
+            25%{transform:translate(-8px,4px)}
+            75%{transform:translate(8px,-4px)}
+        }
+        .hand {
+            font-size: 80px;
+        }
+        .vs {
+            font-size: 40px;
+            font-weight: bold;
+            color: #f5576c;
+        }
+        .damage {
+            position: fixed;
+            font-size: 40px;
+            font-weight: bold;
+            pointer-events: none;
+            animation: floatUp 1s forwards;
+            z-index: 1000;
+        }
+        @keyframes floatUp {
+            0%{opacity:1;transform:translateY(0)}
+            100%{opacity:0;transform:translateY(-80px)}
+        }
+        .result-area {
+            background: rgba(0,0,0,0.6);
+            border-radius: 30px;
+            padding: 15px;
+            margin: 20px 0;
+        }
+        .result-text {
+            font-size: 28px;
+            font-weight: bold;
+        }
+        .win { color: #4ade80; }
+        .lose { color: #f87171; }
+        .tie { color: #fbbf24; }
+        .choices {
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+            margin: 20px 0;
+        }
+        .choice-btn {
+            background: #1e293b;
+            border: 2px solid #f5576c;
+            border-radius: 30px;
+            padding: 15px 25px;
+            cursor: pointer;
+            transition: 0.2s;
+        }
+        .choice-btn:hover { transform: scale(1.05); background: #f5576c; }
+        .choice-emoji { font-size: 40px; }
+        .choice-name { color: white; font-size: 12px; margin-top: 5px; }
+        .find-btn {
+            background: linear-gradient(135deg, #f5576c, #f093fb);
+            color: white;
+            border: none;
+            border-radius: 50px;
+            padding: 15px 40px;
+            font-size: 18px;
+            font-weight: bold;
+            cursor: pointer;
+            width: 100%;
+            margin-top: 20px;
+        }
+        .status { color: #94a3b8; margin-top: 15px; }
+        .hidden { display: none; }
+    </style>
+</head>
+<body>
+<div class="game">
+    <div class="vs-area">
+        <div class="fighter" id="fighter1">
+            <div class="hand" id="hand1">🤜</div>
+            <div style="margin-top:10px;font-weight:bold;color:white">YOU</div>
+        </div>
+        <div class="vs">VS</div>
+        <div class="fighter" id="fighter2">
+            <div class="hand" id="hand2">🤛</div>
+            <div style="margin-top:10px;font-weight:bold;color:white">OPPONENT</div>
+        </div>
+    </div>
+
+    <div class="result-area">
+        <div class="result-text" id="resultText">READY TO FIGHT?</div>
+        <div class="status" id="statusText">Click FIND MATCH</div>
+    </div>
+
+    <div class="choices hidden" id="choices">
+        <div class="choice-btn" data-choice="rock">
+            <div class="choice-emoji">🪨</div>
+            <div class="choice-name">ROCK</div>
+        </div>
+        <div class="choice-btn" data-choice="paper">
+            <div class="choice-emoji">📄</div>
+            <div class="choice-name">PAPER</div>
+        </div>
+        <div class="choice-btn" data-choice="scissors">
+            <div class="choice-emoji">✂️</div>
+            <div class="choice-name">SCISSORS</div>
+        </div>
+    </div>
+
+    <button class="find-btn" id="findBtn">🔍 FIND MATCH</button>
+</div>
+
+<script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
+<script>
+    const socket = io();
+    
+    let gameId = null;
+    let playerNum = null;
+    let moveDone = false;
+    
+    const findBtn = document.getElementById('findBtn');
+    const choicesDiv = document.getElementById('choices');
+    const resultText = document.getElementById('resultText');
+    const statusText = document.getElementById('statusText');
+    const hand1 = document.getElementById('hand1');
+    const hand2 = document.getElementById('hand2');
+    const fighter1 = document.getElementById('fighter1');
+    const fighter2 = document.getElementById('fighter2');
+
+    function setHand(hand, choice) {
+        if (choice === 'rock') hand.innerHTML = '✊';
+        else if (choice === 'paper') hand.innerHTML = '✋';
+        else if (choice === 'scissors') hand.innerHTML = '✌️';
+    }
+
+    function resetHands() {
+        hand1.innerHTML = '🤜';
+        hand2.innerHTML = '🤛';
+    }
+
+    function showDamage(winner, loserHand, loserFighter) {
+        loserFighter.classList.add('shake');
+        setTimeout(() => loserFighter.classList.remove('shake'), 300);
+        
+        const rect = loserHand.getBoundingClientRect();
+        const damage = document.createElement('div');
+        damage.className = 'damage';
+        damage.textContent = '-3';
+        damage.style.color = winner === 'p1' ? '#4ade80' : '#f87171';
+        damage.style.left = rect.left + rect.width/2 - 20 + 'px';
+        damage.style.top = rect.top - 30 + 'px';
+        document.body.appendChild(damage);
+        setTimeout(() => damage.remove(), 1000);
+    }
+
+    socket.on('connect', () => {
+        console.log('Connected to server');
+        statusText.textContent = 'Connected! Click FIND MATCH';
+    });
+
+    socket.on('wait', () => {
+        console.log('Waiting for opponent');
+        statusText.textContent = '⏳ Waiting for opponent...';
+        resultText.textContent = 'SEARCHING...';
+    });
+
+    socket.on('start', (data) => {
+        console.log('Match found!', data);
+        gameId = data.gid;
+        playerNum = data.p;
+        resultText.textContent = 'FIGHT!';
+        resultText.className = 'result-text';
+        statusText.textContent = `You are Player ${playerNum}`;
+        choicesDiv.classList.remove('hidden');
+        findBtn.classList.add('hidden');
+        moveDone = false;
+        resetHands();
+    });
+
+    socket.on('result', (data) => {
+        console.log('Game result:', data);
+        setHand(hand1, data.c1);
+        setHand(hand2, data.c2);
+        
+        if (data.winner === 'tie') {
+            resultText.textContent = 'DRAW!';
+            resultText.className = 'result-text tie';
+            fighter1.classList.add('shake');
+            fighter2.classList.add('shake');
+            setTimeout(() => {
+                fighter1.classList.remove('shake');
+                fighter2.classList.remove('shake');
+            }, 300);
+        } else {
+            const youWin = (data.winner === 'p1' && playerNum === 1) || (data.winner === 'p2' && playerNum === 2);
+            resultText.textContent = youWin ? 'YOU WIN!' : 'YOU LOSE!';
+            resultText.className = youWin ? 'result-text win' : 'result-text lose';
+            
+            if (youWin) {
+                showDamage('p1', hand2, fighter2);
+            } else {
+                showDamage('p2', hand1, fighter1);
+            }
+        }
+        
+        statusText.textContent = 'Game over. Click FIND MATCH to play again.';
+        choicesDiv.classList.add('hidden');
+        findBtn.classList.remove('hidden');
+        gameId = null;
+    });
+
+    socket.on('opponent_disconnected', () => {
+        statusText.textContent = 'Opponent left! Click FIND MATCH.';
+        resultText.textContent = 'OPPONENT LEFT';
+        resultText.className = 'result-text lose';
+        choicesDiv.classList.add('hidden');
+        findBtn.classList.remove('hidden');
+        gameId = null;
+    });
+
+    findBtn.onclick = () => {
+        console.log('Finding match...');
+        socket.emit('find');
+        statusText.textContent = '🔍 Finding opponent...';
+        resultText.textContent = 'SEARCHING...';
+        resetHands();
+    };
+
+    document.querySelectorAll('.choice-btn').forEach(btn => {
+        btn.onclick = () => {
+            if (moveDone || !gameId) return;
+            const choice = btn.dataset.choice;
+            console.log(`Making move: ${choice} as player ${playerNum}`);
+            setHand(playerNum === 1 ? hand1 : hand2, choice);
+            socket.emit('move', { gid: gameId, choice: choice, player: playerNum });
+            moveDone = true;
+            statusText.textContent = 'Waiting for opponent...';
+        };
+    });
+</script>
+</body>
+</html>
